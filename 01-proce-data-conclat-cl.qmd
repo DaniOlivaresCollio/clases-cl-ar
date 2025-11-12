@@ -52,13 +52,13 @@ p_load(
 ## Cargar datos
 
 ```{r datos,message=FALSE,warning=FALSE}
-data <- readRDS("input/data/datos-clases.rds")
+data_completa <- readRDS("input/data/datos-clases.rds")
 ```
 
 ## Selección de variables
 
 ```{r data,message=FALSE,warning=FALSE}
-data <- data %>%
+data <- data_completa %>%
   select(
     # identificacion
     id,
@@ -66,9 +66,8 @@ data <- data %>%
     
     # Demográficas
     e01,                         # sexo
-    female,                      # female  
-    age,                         # edad
-    educ,                        # educación
+    e02,                         # edad
+    e05,                         # educación
     wrightclass1_original,       # clase
     wrightclass2_capitalists,
     wrightclass1_informal,
@@ -86,16 +85,19 @@ data <- data %>%
     
     # Relación con los medios de producción
     a07,                         # employment situation
-    relation_mop,                # relation mean of production
-    company_size,                # tamaño empresa
-    workplace_size,              # tamaño local    
+    a25_rec,                     # rama
+    a26,                         # tamaño empresa
+    a27,                         # tamaño local  
     b19,                         # sindicatos en empresa
     b21,                         # afiliación sindical
-    a25_rec,                     # rama
+    b29,                         # probb unirse a sindicato
+    b25,                         # afiliacion otras organizaciones
 
     # Políticas
     c01_01,                      # Importancia: mejores salarios
     c01_02,                      # Importancia: reducir dedsigualdad
+    c01_03,                      # Importancia: derechos mujeres
+    c01_04,                      # Importancia: derechos informales
     c05_02,                      # Acuerdo: desigualda es porque dueños empresa pagan poco
     c05_03,                      # Acuerdo: alto nivel vida dueños empresas es por pagar poco
     c06_02,                      # Acuerdo: apoyo sistema solidario de reparto
@@ -112,9 +114,9 @@ data <- data %>%
 
 ## Procesamiento
 
-### Demográficas
+### --- Demográficas ---
 
-#### gender
+### gender
 
 ```{r}
 frq(data$e01)
@@ -135,19 +137,43 @@ data <- data %>%
 frq(data$gender)
 ```
 
-#### female
+### female
 
 ```{r}
+data <- data %>%
+  mutate(
+    female = case_when(
+      e01 == 1 ~ 0,
+      e01 == 2 ~ 1
+    )
+  ) %>% 
+  set_variable_labels(female = "Gender (1 = female)") %>% 
+  set_value_labels(female = c(
+    "Female" = 1, 
+    "Male" = 0
+  ))
+
 frq(data$female)
 ```
 
-#### age
+### age
 
 ```{r}
+descr(data$e02)
+
+data <- data %>%
+  mutate(
+    age = case_when(
+      e02 %in% c(-888, -999) ~ NA_real_,
+      TRUE ~ as.numeric(e02)
+    )
+  ) %>% 
+  set_variable_labels(age = "Age")
+
 descr(data$age)
 ```
 
-#### age_br
+### age_br
 
 ```{r}
 data <- data %>%
@@ -165,39 +191,165 @@ data <- data %>%
 frq(data$age_br)
 ```
 
-#### educ
+### educ
 
 ```{r}
+frq(data$e05)
+
+data <- data %>%
+  mutate(
+    educ = ifelse(e05 %in% c(-999, -888), NA, e05)
+  ) %>%
+  set_variable_labels(educ = "Educational level")
+
 frq(data$educ)
 ```
 
-### Relación con los medios de producción
+### --- Relación con los medios de producción ---
 
-#### sit_empleo
+### sit_empleo
 
 ```{r,warning=FALSE,message=FALSE}
 frq(data$a07)
 ```
 
-#### relation_mop
+### relation_mop
 
 ```{r}
+data <- data %>%
+  mutate(
+    relation_mop = case_when(
+      as_numeric(a07) == 1 ~ 1,
+      as_numeric(a07) == 2 ~ 2,
+      as_numeric(a07) >= 3 ~ 3,
+      TRUE ~ NA_real_
+      ),
+    relation_mop = factor(
+      relation_mop,
+      levels = 1:3,
+      labels = c(
+        "1. Employers",
+        "2. Self-Employed",
+        "3. Salaried"
+      )
+    )
+  ) %>%
+  set_variable_labels(relation_mop = "Relation with Means of Production")
+
 frq(data$relation_mop)
 ```
 
-#### company_size
+### sector
 
 ```{r}
+data <- data %>%
+  mutate(
+    sector=case_when(
+      as.numeric(a07) %in% c(1, 2, 5, 6, 7, 9) ~ 1,
+      as.numeric(a07) %in% c(3, 4, 8) ~ 0
+    ))%>% 
+  set_variable_labels(sector = "Sector (1 = private)") %>% 
+  set_value_labels(sector = c(
+    "Private" = 1,
+    "Public" = 0
+  )) 
+
+frq(data$sector)
+```
+
+### rama
+
+```{r}
+frq(data$a25_rec)
+data$rama <- data$a25_rec
+
+data <- data %>% 
+  mutate(
+    rama = factor(
+      case_when(
+        rama==1~"A",
+        rama==2|rama==3~"BC",
+        rama==4|rama==5|rama==6~"DEF",
+        rama==7|rama==8~"GI",
+        rama==9~"H",
+        rama==10|rama==11|rama==12|rama==13|rama==14~"JKLMN",
+        rama==15~"O",
+        rama==16|rama==17~"PQ",
+        rama==18|rama==19|rama==20~"RSU",
+        rama==21~"T"
+        )
+      )
+    ) %>% 
+  set_variable_labels(rama = "Branch of economic activity")
+
+frq(data$rama)
+```
+
+### company_size
+
+```{r}
+frq(data$a26)
+
+data <- data %>%
+  mutate(
+    company_size = case_when(
+      a26 %in% c(1) ~ 1,
+      a26 %in% c(2, 3) ~ 2,
+      a26 %in% c(4, 5) ~ 3,
+      a26 %in% c(6, 7) ~ 4,
+      a26 %in% c(8, 9) ~ 5,
+      TRUE ~ NA_real_
+    ),
+    company_size = factor(
+      company_size, 
+      levels = 1:5, 
+      labels = c(
+        "Solo",
+        "2-9",
+        "10-49",
+        "50-199",
+        "200 or more"),
+      ordered = TRUE
+    )
+  ) %>%
+  set_variable_labels(company_size = "Company Size")
+
+frq(data$company_size)
+```
+
+### workplace_size
+
+```{r}
+frq(data$a27)
+
+data <- data %>%
+  mutate(
+    workplace_size = case_when(
+      a27 %in% c(1) ~ 1,
+      a27 %in% c(2, 3) ~ 2,
+      a27 %in% c(4, 5) ~ 3,
+      a27 %in% c(6, 7) ~ 4,
+      a27 %in% c(8, 9) ~ 5,
+      TRUE ~ NA_real_
+    ),
+    workplace_size = factor(
+      workplace_size, 
+      levels = 1:5, 
+      labels = c(
+        "Solo",
+        "2-9",
+        "10-49",
+        "50-199",
+        "200 or more"),
+      ordered = TRUE
+    )
+  ) %>%
+  set_variable_labels(workplace_size = "Workplace Size")
+
 frq(data$workplace_size)
 ```
 
-#### workplace_size
-
-```{r}
-frq(data$workplace_size)
-```
-
-#### unions
+### unions
 
 ```{r,warning=FALSE,message=FALSE}
 frq(data$b19)
@@ -222,19 +374,22 @@ data <- data %>%
 frq(data$unions)
 ```
 
-#### union_member
+### union_member
 
+Afiliados asalariados e independientes (b25 == 1)
+ 
 ```{r,warning=FALSE,message=FALSE}
 frq(data$b21)
+frq(data$b25)
 
 # Afiliación sindical
 data <- data %>%
   mutate(
     union_member = case_when(
-      as.numeric(relation_mop) %in% c(1, 2) ~ NA_real_,
       as.numeric(relation_mop) == 3 & b21 %in% c(1, 2) ~ 1,
       as.numeric(relation_mop) == 3 & b21 %in% c(3, -888, -999) ~ 0,
-      unions == 0 ~ 0
+      as.numeric(relation_mop) %in% c(1, 2) & b25 == 1 ~ 1,
+      as.numeric(relation_mop) %in% c(1, 2) & b25 %in% c(3, 4, -888, -999) ~ 0,
     )) %>%
   set_variable_labels(union_member = "Union membership (1 = yes)") %>% 
   set_value_labels(union_member = c(
@@ -246,9 +401,31 @@ data <- data %>%
 frq(data$union_member)
 ```
 
-### Políticas
+### prob_unionmem
 
-#### c01_01
+```{r}
+frq(data$b29)
+
+data <- data %>%
+  mutate(
+    prob_unionmem = case_when(
+      b29 %in% c(3, 4,5) ~ 1,
+      b29 %in% c(1, 2, -888, -999) ~ 0,
+    )
+  ) %>% 
+  set_variable_labels(prob_unionmem = "Intention to unionize (1 = yes)") %>% 
+  set_value_labels(union_member = c(
+    "Yes" = 1,
+    "No" = 0
+  )
+  )
+
+frq(data$prob_unionmem)
+```
+
+### --- Políticas ---
+
+### c01_01
 
 ```{r}
 # c01_01: Importancia: mejores salarios
@@ -263,7 +440,7 @@ data <- data %>%
 frq(data$c01_01)
 ```
 
-#### c01_02
+### c01_02
 
 ```{r}
 frq(data$c01_02)
@@ -277,7 +454,35 @@ data <- data %>%
 frq(data$c01_02)
 ```
 
-#### c05_02
+### c01_02
+
+```{r}
+frq(data$c01_03)
+
+data <- data %>%
+  mutate(
+    c01_03 = ifelse(c01_03 %in% c(-999, -888), NA, c01_03)
+  ) %>%
+  set_variable_labels(c01_03 = "Level of importance of unions: in protecting the rights of working women (c01_03)")
+
+frq(data$c01_03)
+```
+
+### c01_04
+
+```{r}
+frq(data$c01_04)
+
+data <- data %>%
+  mutate(
+    c01_04 = ifelse(c01_04 %in% c(-999, -888), NA, c01_04)
+  ) %>%
+  set_variable_labels(c01_04 = "Level of importance of unions: in protecting the rights of informal workers (c01_04)")
+
+frq(data$c01_04)
+```
+
+### c05_02
 
 ```{r}
 # c05_02: Acuerdo: desigualdad es porque dueños empresa pagan poco
@@ -292,7 +497,7 @@ data <- data %>%
 frq(data$c05_02)
 ```
 
-#### c05_02_dummy
+### c05_02_dummy
 
 ```{r}
 # Crear variable dicotómica: acuerdo (4 o 5)
@@ -310,7 +515,7 @@ data <- data %>%
 frq(data$c05_02_dummy)
 ```
 
-#### c05_03
+### c05_03
 
 ```{r}
 # c05:03: Acuerdo: alto nivel vida dueños empresas es por pagar poco
@@ -325,7 +530,7 @@ data <- data %>%
 frq(data$c05_03)
 ```
 
-#### c05_03_dummy
+### c05_03_dummy
 
 ```{r}
 # Crear variable dicotómica: acuerdo (4 o 5)
@@ -343,7 +548,7 @@ data <- data %>%
 frq(data$c05_03_dummy)
 ```
 
-#### c06_02
+### c06_02
 
 ```{r}
 # c06_02: Acuerdo: apoyo sistema solidario de reparto
@@ -358,7 +563,7 @@ data <- data %>%
 frq(data$c06_02)
 ```
 
-#### c06_02_dummy
+### c06_02_dummy
 
 ```{r}
 # Crear variable dicotómica: acuerdo (4 o 5)
@@ -376,7 +581,7 @@ data <- data %>%
 frq(data$c06_02_dummy)
 ```
 
-#### c07_01
+### c07_01
 
 ```{r}
 # Acuerdo: aumentar impuestos a los más ricos
@@ -391,7 +596,7 @@ data <- data %>%
 frq(data$c07_01)
 ```
 
-#### c07_01_dummy
+### c07_01_dummy
 
 ```{r}
 # Crear variable dicotómica: acuerdo (4 o 5)
@@ -409,7 +614,7 @@ data <- data %>%
 frq(data$c07_01_dummy)
 ```
 
-#### c07_03
+### c07_03
 
 ```{r}
 # Acuerdo: sindicatos tengan más poder
@@ -424,7 +629,7 @@ data <- data %>%
 frq(data$c07_03)
 ```
 
-#### c07_03_dummy
+### c07_03_dummy
 
 ```{r}
 # Crear variable dicotómica: acuerdo (4 o 5)
@@ -442,7 +647,7 @@ data <- data %>%
 frq(data$c07_03_dummy)
 ```
 
-#### c07_04
+### c07_04
 
 ```{r}
 # Acuerdo: redistribuir riquezas
@@ -457,7 +662,7 @@ data <- data %>%
 frq(data$c07_04)
 ```
 
-#### c07_04_dummy
+### c07_04_dummy
 
 ```{r}
 # Crear variable dicotómica: acuerdo (4 o 5)
@@ -475,7 +680,7 @@ data <- data %>%
 frq(data$c07_04_dummy)
 ```
 
-#### c07_05
+### c07_05
 
 ```{r}
 # Acuerdo: igualdad hombres y mujeres
@@ -490,7 +695,7 @@ data <- data %>%
 frq(data$c07_05)
 ```
 
-#### c07_05_dummy
+### c07_05_dummy
 
 ```{r}
 # Crear variable dicotómica: acuerdo (4 o 5)
@@ -508,7 +713,7 @@ data <- data %>%
 frq(data$c07_05_dummy)
 ```
 
-#### c07_06
+### c07_06
 
 ```{r}
 # Acuerdo: educación universitaria pública
@@ -523,7 +728,7 @@ data <- data %>%
 frq(data$c07_06)
 ```
 
-#### c07_06_dummy
+### c07_06_dummy
 
 ```{r}
 # Crear variable dicotómica: acuerdo (4 o 5)
@@ -594,5 +799,8 @@ frq(data$politizado)
 ## Guardar datos
 
 ```{r}
+dim(data)
+names(data)
+
 saveRDS(data,file="output/data/data-cl-paperclar.rds")
 ```
