@@ -1,6 +1,6 @@
-# Gráficos 1
+# Procesamiento Data Conclat Chile
 
-## Preparación
+Capítulo para el procesamiento de la data Conclat Chile.
 
 ```{r,echo=FALSE,warning=FALSE,message=FALSE}
 rm(list=ls())
@@ -41,1625 +41,767 @@ p_load(
   srvyr,             # diseño survey con tidy
   rlang,             # motor interno de tidyverse, para usar expresiones 
   tidyverse,
-  statar,            # conectar con el lenguaje stata
+  statar            # conectar con el lenguaje stata
 
-  # conexion web
-  curl,              # conexiones http de bajo nivel: para solucionar el problema de la api del ine
-  httr               # cliente http para API
+  # # conexion web
+  # curl,              # conexiones http de bajo nivel: para solucionar el problema de la api del ine
+  # httr               # cliente http para API
   )
 ```
 
-### Cargar datos
+## Cargar datos
 
 ```{r datos,message=FALSE,warning=FALSE}
-data <- readRDS("output/data/clases-cl-ar.rds")
-
-# base survey
-data_svy <- as_survey_design(data, weights = rake_wb2)
+data_completa <- readRDS("input/data/datos-clases.rds")
 ```
 
-### Función acuerdo
+## Selección de variables
+
+```{r data,message=FALSE,warning=FALSE}
+data <- data_completa %>%
+  select(
+    # identificacion
+    id,
+    rake_wb2,
+    
+    # Demográficas
+    e01,                         # sexo
+    e02,                         # edad
+    e05,                         # educación
+    wrightclass1_original,       # clase
+    wrightclass2_capitalists,
+    wrightclass1_informal,
+    wrightclass2_informal,
+    wrightclass1_reduced,
+    wrightclass2_reduced,
+    wrightclass1_reduced2,
+    wrightclass1_reduced3,
+    wrightclass1_reduced3_v2,
+    wrightclass2_reduced3,
+    wrightclass1_reduced4,
+    wrightclass2_reduced4,
+    wrightclass1_reduced5,
+    wrightclass1_reduced6,
+    wrightclass1_reduced7,
+    
+    # Relación con los medios de producción
+    a07,                         # employment situation
+    a25_rec,                     # rama
+    a26,                         # tamaño empresa
+    a27,                         # tamaño local  
+    b19,                         # sindicatos en empresa
+    b21,                         # afiliación sindical
+    b29,                         # probb unirse a sindicato
+    b25,                         # afiliacion otras organizaciones
+
+    # Políticas
+    c01_01,                      # Importancia: mejores salarios
+    c01_02,                      # Importancia: reducir dedsigualdad
+    c01_03,                      # Importancia: derechos mujeres
+    c01_04,                      # Importancia: derechos informales
+    c05_02,                      # Acuerdo: desigualda es porque dueños empresa pagan poco
+    c05_03,                      # Acuerdo: alto nivel vida dueños empresas es por pagar poco
+    c06_02,                      # Acuerdo: apoyo sistema solidario de reparto
+    c07_01,                      # Acuerdo: aumentar impuestos a los más ricos
+    c07_03,                      # Acuerdo: sindicatos tengan más poder
+    c07_04,                      # Acuerdo: redistribuir riquezas
+    c07_05,                      # Acuerdo: igualdad hombres y mujeres
+    c07_06,                      # Acuerdo: educación universitaria pública
+    c08,                         # posición política
+    c10_01,                      # habla de politica con amigos
+    c15_01                       # confia en partidos políticos
+  )
+```
+
+## Procesamiento
+
+### --- Demográficas ---
+
+### gender
 
 ```{r}
-plot_binary_by <- function(
-  data,                # poner la data svy
-  var,                 # variable binaria 0/1
-  x_var,               # categórica para eje X
-  fill_var = NULL,     # categórica para fill (opcional)
-  title,               # título del gráfico
-  subtitle,            # subtítulo del gráfico
+frq(data$e01)
 
-  # ---- Etiquetas ----
-  x_label = NULL,
-  y_label = "Porcentaje",
-  fill_label = NULL,
-  caption = NULL,
+data <- data %>%
+  mutate(
+    gender = factor(
+      e01, 
+      levels = 1:2,
+      labels = c(
+        "Male",
+        "Female"
+      )
+      )
+    ) %>%
+  set_variable_labels(gender = "Gender")
 
-  # ---- Porcentajes ----
-  label_accuracy = 0.1,
-  axis_accuracy  = 1,
+frq(data$gender)
+```
 
-  # ---- Estilo y escala ----
-  expand_y = TRUE,
-  palette = NULL,
-  dodge_width = 0.8,
-  single_fill = "#3b82f6",     # color único cuando no hay fill_var
-  color_by_x = FALSE,          # si TRUE, colorea por categoría de x_var
-  text_color = "white",        # color del texto de las etiquetas
+### female
 
-  # ---- Texto eje X ----
-  x_text_angle = 0,
-  x_text_hjust = NULL,
-  x_text_vjust = NULL,
-  x_text_size  = 8,
-
-  # ---- Guardado ----
-  file   = NULL,
-  width  = 10,
-  height = 6,
-  dpi    = 300,
-
-  # ---- Comportamiento ----
-  show = TRUE,
-  save = TRUE,
-  return_df = FALSE,
-  ...
-) {
-  var_name   <- as_name(ensym(var))
-  x_name     <- as_name(ensym(x_var))
-  fill_quo   <- enquo(fill_var)
-  has_fill   <- !(quo_is_null(fill_quo) || quo_is_missing(fill_quo) || is.null(get_expr(fill_quo)))
-
-  x_label    <- x_label    %||% as_label(enquo(x_var))
-  if (has_fill) fill_label <- fill_label %||% as_label(fill_quo)
-
-  # ---- Datos ----
-  if (has_fill) {
-    df <- data %>%
-      dplyr::filter(
-        !is.na({{ x_var }}),
-        !is.na({{ fill_var }}),
-        !is.na({{ var }})
-      ) %>%
-      dplyr::group_by({{ x_var }}, {{ fill_var }}) %>%
-      dplyr::summarise(prop = srvyr::survey_mean({{ var }}, na.rm = TRUE), .groups = "drop")
-
-    N_unw <- data %>%
-      dplyr::filter(
-        !is.na({{ x_var }}),
-        !is.na({{ fill_var }}),
-        !is.na({{ var }})
-      ) %>%
-      dplyr::summarise(n = dplyr::n()) %>% dplyr::pull(n)
-  } else {
-    df <- data %>%
-      dplyr::filter(
-        !is.na({{ x_var }}),
-        !is.na({{ var }})
-      ) %>%
-      dplyr::group_by({{ x_var }}) %>%
-      dplyr::summarise(prop = srvyr::survey_mean({{ var }}, na.rm = TRUE), .groups = "drop")
-
-    N_unw <- data %>%
-      dplyr::filter(
-        !is.na({{ x_var }}),
-        !is.na({{ var }})
-      ) %>%
-      dplyr::summarise(n = dplyr::n()) %>% dplyr::pull(n)
-  }
-
-  if (is.null(caption)) {
-    caption <- paste0(
-      "Nota: Datos ponderados. Proporción que responde De acuerdo (4) o Muy de acuerdo (5). N = ",
-      format(N_unw, big.mark = ".", decimal.mark = ",")
+```{r}
+data <- data %>%
+  mutate(
+    female = case_when(
+      e01 == 1 ~ 0,
+      e01 == 2 ~ 1
     )
-  }
-
-  y_scale <- if (isTRUE(expand_y)) {
-    ggplot2::scale_y_continuous(labels = scales::percent_format(accuracy = axis_accuracy),
-                                expand = ggplot2::expansion(mult = c(0, 0.1)))
-  } else {
-    ggplot2::scale_y_continuous(labels = scales::percent_format(accuracy = axis_accuracy))
-  }
-
-  # Defaults razonables para hjust/vjust según ángulo
-  .hjust <- if (is.null(x_text_hjust)) { if (x_text_angle == 0) 0.5 else 1 } else x_text_hjust
-  .vjust <- if (is.null(x_text_vjust)) { if (x_text_angle == 90) 0.5 else 1 } else x_text_vjust
-
-  # ---- Plot ----
-  if (has_fill) {
-    p <- ggplot2::ggplot(df, ggplot2::aes(x = {{ x_var }}, y = prop, fill = {{ fill_var }})) +
-      ggplot2::geom_col(position = ggplot2::position_dodge(width = dodge_width)) +
-      ggplot2::geom_text(
-        ggplot2::aes(label = scales::percent(prop, accuracy = label_accuracy)),
-        position = ggplot2::position_dodge(width = dodge_width),
-        vjust = 1.3, size = 2.5, color = "white"
-      ) +
-      (if (is.null(palette)) ggplot2::scale_fill_discrete() else ggplot2::scale_fill_manual(values = palette)) +
-      y_scale +
-      ggplot2::labs(
-        title = title, subtitle = subtitle, caption = caption,
-        x = x_label, y = y_label, fill = fill_label
-      ) +
-      ggplot2::theme_minimal() +
-      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = x_text_angle, hjust = .hjust, vjust = .vjust, size = x_text_size))
-} else {
-    if (isTRUE(color_by_x)) {
-      p <- ggplot2::ggplot(df, ggplot2::aes(x = {{ x_var }}, y = prop, fill = {{ x_var }})) +
-        ggplot2::geom_col() +
-        (if (is.null(palette)) ggplot2::scale_fill_discrete(guide = "none")
-         else ggplot2::scale_fill_manual(values = palette, guide = "none")) +
-        y_scale +
-        ggplot2::geom_text(
-          ggplot2::aes(label = scales::percent(prop, accuracy = label_accuracy)),
-          vjust = 1.3, size = 2.5, color = text_color
-        ) +
-        ggplot2::labs(
-          title = title, subtitle = subtitle, caption = caption,
-          x = x_label, y = y_label
-        ) +
-        ggplot2::theme_minimal() +
-        ggplot2::theme(
-          axis.text.x = ggplot2::element_text(angle = x_text_angle, hjust = .hjust, vjust = .vjust, size = x_text_size)
-        )
-    } else {
-      p <- ggplot2::ggplot(df, ggplot2::aes(x = {{ x_var }}, y = prop)) +
-        ggplot2::geom_col(fill = single_fill) +
-        y_scale +
-        ggplot2::geom_text(
-          ggplot2::aes(label = scales::percent(prop, accuracy = label_accuracy)),
-          vjust = 1.3, size = 2.5, color = text_color
-        ) +
-        ggplot2::labs(
-          title = title, subtitle = subtitle, caption = caption,
-          x = x_label, y = y_label
-        ) +
-        ggplot2::theme_minimal() +
-        ggplot2::theme(
-          axis.text.x = ggplot2::element_text(angle = x_text_angle, hjust = .hjust, vjust = .vjust, size = x_text_size)
-        )
-    }
-  }
-
-  if (isTRUE(show)) print(p)
-
-  # ---- Guardado ----
-  if (isTRUE(save)) {
-    if (is.null(file)) {
-      if (!dir.exists("output/graph1")) dir.create("output/graph4", recursive = TRUE)
-      if (has_fill) {
-        file <- file.path("output/graph1", paste0(var_name, "_by_", x_name, "_and_", as_name(get_expr(fill_quo)), ".png"))
-      } else {
-        file <- file.path("output/graph1", paste0(var_name, "_by_", x_name, ".png"))
-      }
-    } else {
-      dir_to_make <- dirname(file)
-      if (!dir.exists(dir_to_make)) dir.create(dir_to_make, recursive = TRUE)
-    }
-    ggplot2::ggsave(filename = file, plot = p, width = width, height = height, dpi = dpi, ...)
-  }
-
-  if (isTRUE(return_df)) {
-    return(invisible(list(plot = p, data = df)))
-  } else {
-    return(invisible(p))
-  }
-}
-
-```
-
-## Edad y sexo
-
-### edad
-
-```{r}
-# Calcular proporciones ponderadas solo por clase social
-tabla_total <- data_svy %>%
-  filter(!is.na(edad_tramos)) %>% 
-  group_by(edad_tramos) %>%
-  summarise(prop = survey_mean(vartype = NULL, proportion = TRUE)) %>%
-  ungroup()
-
-n_unw <- data_svy %>%
-  filter(!is.na(edad_tramos)) %>%
-  summarise(N = unweighted(n())) %>%
-  pull(N)
-
-# Gráfico
-ggplot(tabla_total, aes(x = edad_tramos, y = prop)) +
-  geom_col(fill = "#9e1b1e") +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  geom_text(
-    aes(label = paste0(round(prop * 100, 1), "%")),
-    vjust = -0.3,
-    color = "black",
-    size = 3
-  ) +
-  labs(
-    title = "Distribución de la población por edad",
-    caption = paste0("Fuente: Elaboración propia con datos de la Encuesta Conclat Chile 2024. Datos ponderados. N = ", n_unw),
-    x = "Tramo de edad",
-    y = "Porcentaje"
-  ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 0, hjust = 1))
-
-ggsave("output/graph1/edad.png", width = 10, height = 6, dpi = 300)
-```
-
-### edad x sexo
-
-```{r}
-# Calcular totales ponderados por clase x sexo
-tabla_total <- data_svy %>%
-  filter(!is.na(edad_tramos), !is.na(sexo)) %>%
-  group_by(edad_tramos, sexo) %>%
-  summarise(n = survey_total(vartype = NULL)) %>%
-  ungroup() %>%
-  # (opcional) asegurar combinaciones faltantes con 0
-  complete(edad_tramos, sexo, fill = list(n = 0)) %>%
-  group_by(sexo) %>%
-  mutate(prop = n / sum(n)) %>%      # proporción dentro de cada sexo
-  ungroup()
-
-n_unw <- data_svy %>%
-  filter(!is.na(edad_tramos), !is.na(sexo)) %>%
-  summarise(N = unweighted(n())) %>%
-  pull(N)
-
-# Gráfico: barras agrupadas (dodge), normalizadas dentro de cada sexo
-ggplot(tabla_total, aes(x = edad_tramos, y = prop, fill = sexo)) +
-  geom_col(position = position_dodge(width = 0.8)) +
-  scale_fill_manual(values = c("Mujer" = "#f25f5c", "Hombre" = "#9e1b1e")) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  geom_text(
-    aes(label = paste0(round(prop * 100, 1), "%")),
-    position = position_dodge(width = 0.8),
-    vjust = -0.3,
-    size = 2.8
-  ) +
-  labs(
-    title = "Distribución por tramo etario dentro de cada sexo",
-    x = "Tramos de edad",
-    y = "Porcentaje",
-    fill = "Sexo",
-    caption = paste0("Fuente: Elaboración propia con datos de la Encuesta Conclat Chile 2024. Datos ponderados. N = ", n_unw)
-  ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-ggsave("output/graph1/edad_sexo.png", width = 10, height = 6, dpi = 300)
-```
-
-### c05_02 x edad x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c05_02_acuerdo,
-  x_var = edad_tramos,
-  fill_var = sexo,
-  title = "Acuerdo con: Una de las principales razones de la alta desigualdad en Chile \nes que los dueños de las empresas pagan poco a sus trabajadores",
-  subtitle = "Porcentaje según sexo y edad",
-  x_label = "Tramo de edad",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 0
-)
-```
-
-### c05_03 x edad x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c05_03_acuerdo,
-  x_var = edad_tramos,
-  fill_var = sexo,
-  title = "Acuerdo con: El alto nivel de vida de los dueños de las empresas es resultado \nde lo poco que pagan a sus trabajadores",
-  subtitle = "Porcentaje según sexo y edad",
-  x_label = "Tramo de edad",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 0
-)
-```
-
-### c06_02 x edad x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c06_02_acuerdo,
-  x_var = edad_tramos,
-  fill_var = sexo,
-  title = "Acuerdo con: Apoyaría una reforma para crear un sistema solidario de reparto \nsi eso permite subir las pensiones",
-  subtitle = "Porcentaje según sexo y edad",
-  x_label = "Tramo de edad",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 0
-)
-```
-
-### c07_01 x edad x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_01_acuerdo,
-  x_var = edad_tramos,
-  fill_var = sexo,
-  title = "Acuerdo con: Aumentar los impuestos a los más ricos para financiar \nprogramas sociales",
-  subtitle = "Porcentaje según sexo y edad",
-  x_label = "Tramo de edad",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 0
-)
-```
-
-### c07_03 x edad x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_03_acuerdo,
-  x_var = edad_tramos,
-  fill_var = sexo,
-  title = "Acuerdo con: Implementar leyes para que los sindicatos tengan más poder \nde negociación",
-  subtitle = "Porcentaje según sexo y edad",
-  x_label = "Tramo de edad",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 0
-)
-```
-
-### c07_04 x edad x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_04_acuerdo,
-  x_var = edad_tramos,
-  fill_var = sexo,
-  title = "Acuerdo con: Redistribuir las riquezas desde quienes tienen más recursos \nhacia quienes tienen menos recursos",
-  subtitle = "Porcentaje según sexo y edad",
-  x_label = "Tramo de edad",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 0
-)
-```
-
-### c07_05 x edad x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_05_acuerdo,
-  x_var = edad_tramos,
-  fill_var = sexo,
-  title = "Acuerdo con: Promover la igualdad entre hombres y mujeres",
-  subtitle = "Porcentaje según sexo y edad",
-  x_label = "Tramo de edad",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 0
-)
-```
-
-### c07_06 x edad x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_06_acuerdo,
-  x_var = edad_tramos,
-  fill_var = sexo,
-  title = "Acuerdo con: Garantizar la educación universitaria pública y gratuita",
-  subtitle = "Porcentaje según sexo y edad",
-  x_label = "Tramo de edad",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 0
-)
-```
-
-## Clase 1 y sexo
-
-### clase 1 reduced
-
-```{r}
-# Calcular proporciones ponderadas solo por clase social
-tabla_total <- data_svy %>%
-  filter(!is.na(wrightclass1_reduced)) %>% 
-  group_by(wrightclass1_reduced) %>%
-  summarise(prop = survey_mean(vartype = NULL, proportion = TRUE)) %>%
-  ungroup()
-
-n_unw <- data_svy %>%
-  filter(!is.na(wrightclass1_reduced)) %>%
-  summarise(N = unweighted(n())) %>%
-  pull(N)
-
-# Gráfico
-ggplot(tabla_total, aes(x = wrightclass1_reduced, y = prop)) +
-  geom_col(fill = "#9e1b1e") +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  geom_text(
-    aes(label = paste0(round(prop * 100, 1), "%")),
-    vjust = -0.3,
-    color = "black",
-    size = 3
-  ) +
-  labs(
-    title = "Distribución de la población por clase social",
-    caption = paste0("Fuente: Elaboración propia con datos de la Encuesta Conclat Chile 2024. Datos ponderados. N = ", n_unw),
-    x = "Clase social",
-    y = "Porcentaje"
-  ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-ggsave("output/graph1/class1.png", width = 10, height = 6, dpi = 300)
-```
-
-### clase x sexo
-
-```{r}
-# Calcular totales ponderados por clase x sexo
-tabla_total <- data_svy %>%
-  filter(!is.na(wrightclass1_reduced), !is.na(sexo)) %>%
-  group_by(wrightclass1_reduced, sexo) %>%
-  summarise(n = survey_total(vartype = NULL)) %>%
-  ungroup() %>%
-  # (opcional) asegurar combinaciones faltantes con 0
-  complete(wrightclass1_reduced, sexo, fill = list(n = 0)) %>%
-  group_by(sexo) %>%
-  mutate(prop = n / sum(n)) %>%      # proporción dentro de cada sexo
-  ungroup()
-
-n_unw <- data_svy %>%
-  filter(!is.na(wrightclass1_reduced), !is.na(sexo)) %>%
-  summarise(N = unweighted(n())) %>%
-  pull(N)
-
-# Gráfico: barras agrupadas (dodge), normalizadas dentro de cada sexo
-ggplot(tabla_total, aes(x = wrightclass1_reduced, y = prop, fill = sexo)) +
-  geom_col(position = position_dodge(width = 0.8)) +
-  scale_fill_manual(values = c("Mujer" = "#f25f5c", "Hombre" = "#9e1b1e")) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  geom_text(
-    aes(label = paste0(round(prop * 100, 1), "%")),
-    position = position_dodge(width = 0.8),
-    vjust = -0.3,
-    size = 2.8
-  ) +
-  labs(
-    title = "Distribución por clase social dentro de cada sexo",
-    x = "Clase social",
-    y = "Porcentaje",
-    fill = "Sexo",
-    caption = paste0("Fuente: Elaboración propia con datos de la Encuesta Conclat Chile 2024. Datos ponderados. N = ", n_unw)
-  ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-ggsave("output/graph1/class1_sexo.png", width = 10, height = 6, dpi = 300)
-```
-
-### sexo x clase
-
-```{r}
-# Calcular proporciones ponderadas por clase social y sexo
-tabla_total <- data_svy %>%
-  filter(
-    !is.na(wrightclass1_reduced),
-    !is.na(sexo)
   ) %>% 
-  group_by(wrightclass1_reduced, sexo) %>%
-  summarise(prop = survey_mean(vartype = NULL, proportion = TRUE)) %>%
-  ungroup()
+  set_variable_labels(female = "Gender (1 = female)") %>% 
+  set_value_labels(female = c(
+    "Female" = 1, 
+    "Male" = 0
+  ))
 
-n_unw <- data_svy %>%
-  filter(!is.na(wrightclass1_reduced), !is.na(sexo)) %>%
-  summarise(N = unweighted(n())) %>%
-  pull(N)
+frq(data$female)
+```
 
-# Gráfico
-ggplot(tabla_total, aes(x = wrightclass1_reduced, y = prop, fill = sexo)) +
-  geom_col(position = "dodge") +
-  scale_fill_manual(values = c("Mujer" = "#f25f5c", "Hombre" = "#9e1b1e")) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  geom_text(
-    aes(label = round(prop * 100, 1)),
-    position = position_dodge(width = 0.8),
-    vjust = 1.3,
-    color = "white",
-    size = 3
-  ) +
-  labs(
-    title = "Porcentaje de hombres y mujeres en cada categoría de clase social",
-    caption = paste0("Fuente: Elaboración propia con datos de la Encuesta Conclat Chile 2024. Datos ponderados. N = ", n_unw),
-    x = "Clase social",
-    y = "Porcentaje",
-    fill = "Sexo"
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
+### age
+
+```{r}
+descr(data$e02)
+
+data <- data %>%
+  mutate(
+    age = case_when(
+      e02 %in% c(-888, -999) ~ NA_real_,
+      TRUE ~ as.numeric(e02)
+    )
+  ) %>% 
+  set_variable_labels(age = "Age")
+
+descr(data$age)
+```
+
+### age_br
+
+```{r}
+data <- data %>%
+  mutate(
+    age_br = cut(
+      age,
+      breaks = c(17, 24, 34, 44, 54, Inf),
+      labels = c("18-24", "25-34", "35-44", "45-54", "55 o +"),
+      right = TRUE,
+      include.lowest = TRUE
+    )
+  ) %>%
+  set_variable_labels(age_br = "Age brackets")
+
+frq(data$age_br)
+```
+
+### educ
+
+```{r}
+frq(data$e05)
+
+data <- data %>%
+  mutate(
+    educ = ifelse(e05 %in% c(-999, -888), NA, e05)
+  ) %>%
+  set_variable_labels(educ = "Educational level")
+
+frq(data$educ)
+```
+
+### --- Relación con los medios de producción ---
+
+### sit_empleo
+
+```{r,warning=FALSE,message=FALSE}
+frq(data$a07)
+```
+
+### relation_mop
+
+```{r}
+data <- data %>%
+  mutate(
+    relation_mop = case_when(
+      as_numeric(a07) == 1 ~ 1,
+      as_numeric(a07) == 2 ~ 2,
+      as_numeric(a07) >= 3 ~ 3,
+      TRUE ~ NA_real_
+      ),
+    relation_mop = factor(
+      relation_mop,
+      levels = 1:3,
+      labels = c(
+        "1. Employers",
+        "2. Self-Employed",
+        "3. Salaried"
+      )
+    )
+  ) %>%
+  set_variable_labels(relation_mop = "Relation with Means of Production")
+
+frq(data$relation_mop)
+```
+
+### sector
+
+```{r}
+data <- data %>%
+  mutate(
+    sector=case_when(
+      as.numeric(a07) %in% c(1, 2, 5, 6, 7, 9) ~ 1,
+      as.numeric(a07) %in% c(3, 4, 8) ~ 0
+    ))%>% 
+  set_variable_labels(sector = "Sector (1 = private)") %>% 
+  set_value_labels(sector = c(
+    "Private" = 1,
+    "Public" = 0
+  )) 
+
+frq(data$sector)
+```
+
+### rama
+
+```{r}
+frq(data$a25_rec)
+data$rama <- data$a25_rec
+
+data <- data %>% 
+  mutate(
+    rama = factor(
+      case_when(
+        rama==1~"A",
+        rama==2|rama==3~"BC",
+        rama==4|rama==5|rama==6~"DEF",
+        rama==7|rama==8~"GI",
+        rama==9~"H",
+        rama==10|rama==11|rama==12|rama==13|rama==14~"JKLMN",
+        rama==15~"O",
+        rama==16|rama==17~"PQ",
+        rama==18|rama==19|rama==20~"RSU",
+        rama==21~"T"
+        )
+      )
+    ) %>% 
+  set_variable_labels(rama = "Branch of economic activity")
+
+frq(data$rama)
+```
+
+### company_size
+
+```{r}
+frq(data$a26)
+
+data <- data %>%
+  mutate(
+    company_size = case_when(
+      a26 %in% c(1) ~ 1,
+      a26 %in% c(2, 3) ~ 2,
+      a26 %in% c(4, 5) ~ 3,
+      a26 %in% c(6, 7) ~ 4,
+      a26 %in% c(8, 9) ~ 5,
+      TRUE ~ NA_real_
+    ),
+    company_size = factor(
+      company_size, 
+      levels = 1:5, 
+      labels = c(
+        "Solo",
+        "2-9",
+        "10-49",
+        "50-199",
+        "200 or more"),
+      ordered = TRUE
+    )
+  ) %>%
+  set_variable_labels(company_size = "Company Size")
+
+frq(data$company_size)
+```
+
+### workplace_size
+
+```{r}
+frq(data$a27)
+
+data <- data %>%
+  mutate(
+    workplace_size = case_when(
+      a27 %in% c(1) ~ 1,
+      a27 %in% c(2, 3) ~ 2,
+      a27 %in% c(4, 5) ~ 3,
+      a27 %in% c(6, 7) ~ 4,
+      a27 %in% c(8, 9) ~ 5,
+      TRUE ~ NA_real_
+    ),
+    workplace_size = factor(
+      workplace_size, 
+      levels = 1:5, 
+      labels = c(
+        "Solo",
+        "2-9",
+        "10-49",
+        "50-199",
+        "200 or more"),
+      ordered = TRUE
+    )
+  ) %>%
+  set_variable_labels(workplace_size = "Workplace Size")
+
+frq(data$workplace_size)
+```
+
+### unions
+
+```{r,warning=FALSE,message=FALSE}
+frq(data$b19)
+
+# Sindicatos en empresas
+data <- data %>%
+  mutate(
+    unions = case_when(
+      as.numeric(relation_mop) %in% c(1, 2) ~ NA_real_,
+      as.numeric(relation_mop) == 3 & b19 == 1 ~ 1,
+      as.numeric(relation_mop) == 3 & b19 %in% c(2, -888, -999) ~ 0,
+      TRUE ~ NA_real_
+    )
+  ) %>%
+  set_variable_labels(unions = "Union presence in company (1 = yes)") %>% 
+  set_value_labels(unions = c(
+    "Yes" = 1,
+    "No" = 0
+  )
+  )
+ 
+frq(data$unions)
+```
+
+### union_member
+
+Afiliados asalariados e independientes (b25 == 1)
+ 
+```{r,warning=FALSE,message=FALSE}
+frq(data$b21)
+frq(data$b25)
+
+# Afiliación sindical
+data <- data %>%
+  mutate(
+    union_member = case_when(
+      as.numeric(relation_mop) == 3 & b21 %in% c(1, 2) ~ 1,
+      as.numeric(relation_mop) == 3 & b21 %in% c(3, -888, -999, NA) ~ 0,
+      as.numeric(relation_mop) %in% c(1, 2) & b25 == 1 ~ 1,
+      as.numeric(relation_mop) %in% c(1, 2) & b25 %in% c(2, 3, 4, -888, -999, NA) ~ 0,
+    )) %>%
+  set_variable_labels(union_member = "Union membership (1 = yes)") %>% 
+  set_value_labels(union_member = c(
+    "Yes" = 1,
+    "No" = 0
+  )
   )
 
-ggsave("output/graph1/class1_sexo_by_class.png", width = 10, height = 6, dpi = 300)
+frq(data$union_member)
 ```
 
-### sexo x clase 2
+### b29_dummy
 
 ```{r}
-# Totales ponderados por clase x sexo y proporciones dentro de cada clase
-tabla_total <- data_svy %>%
-  filter(!is.na(wrightclass1_reduced), !is.na(sexo)) %>%
-  group_by(wrightclass1_reduced, sexo) %>%
-  summarise(n = survey_total(vartype = NULL)) %>%   # totales ponderados
-  group_by(wrightclass1_reduced) %>%
-  mutate(prop = n / sum(n)) %>%                     # % dentro de cada clase
-  ungroup()
-
-n_unw <- data_svy %>%
-  filter(!is.na(wrightclass1_reduced), !is.na(sexo)) %>%
-  summarise(N = unweighted(n())) %>%
-  pull(N)
-
-# Gráfico apilado (cada barra suma 100%)
-ggplot(tabla_total, aes(x = wrightclass1_reduced, y = prop, fill = sexo)) +
-  geom_col(position = "stack") +
-  scale_fill_manual(values = c("Mujer" = "#f25f5c", "Hombre" = "#9e1b1e")) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  geom_text(
-    aes(label = paste0(round(prop * 100, 1), "%")),
-    position = position_stack(vjust = 0.5),
-    color = "white",
-    size = 2.8
-  ) +
-  labs(
-    title = "Composición por sexo dentro de cada clase social",
-    caption = paste0("Fuente: Elaboración propia con datos de la Encuesta Conclat Chile 2024. Datos ponderados. N = ", n_unw),
-    x = "Clase social",
-    y = "Porcentaje dentro de la clase",
-    fill = "Sexo"
-  ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-ggsave("output/graph1/class1_sexo_by_class_2.png", width = 10, height = 6, dpi = 300)
-```
-
-### clase x sexo x edad
-
-```{r}
-# Calcular proporciones por sexo y edad
-class1_sexo_edad <- data_svy %>%
-  filter(
-    !is.na(sexo),
-    !is.na(edad_tramos),
-    !is.na(wrightclass1_reduced)
-  ) %>%
-  group_by(edad_tramos, sexo, wrightclass1_reduced) %>%
-  summarise(prop = survey_mean(na.rm = TRUE)) %>%
-  ungroup()
-
-n_unw <- data_svy %>%
-  filter(!is.na(wrightclass1_reduced), !is.na(sexo), !is.na(edad_tramos)) %>%
-  summarise(N = unweighted(n())) %>%
-  pull(N)
-
-# Graficar
-grafico <- ggplot(class1_sexo_edad, aes(x = edad_tramos, y = prop, fill = wrightclass1_reduced)) +
-  geom_col(position = "fill", color = "white") +
-  geom_text(
-    aes(label = ifelse(prop > 0.04, paste0(round(prop * 100, 1), "%"), "")),  # mostrar solo si es >4%
-    position = position_fill(vjust = 0.5),
-    color = "white",
-    size = 3.5
-  ) +
-  facet_wrap(~sexo) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  scale_fill_manual(
-    values = c(
-      "1. Formal workers" = "#6f0000",
-      "2. Informal workers" = "#9e1b1e",
-      "3. Informal self-employed" = "#ca0000",
-      "4. Experts" = "#ff5651",
-      "5. Supervisors" ="#b23a48",
-      "6. Managers" = "#8c1d40",
-      "7. Petty bourgeoisie" = "#d1eaf3",
-      "8. Small employers" = "#0f6481",
-      "9. Employers" = "#083342"
-  )) +
-  labs(
-    title = "Clases",
-    subtitle = "Porcentajes según sexo y tramo etario",
-    x = "Tramo de edad",
-    y = "Porcentaje",
-    fill = "Clases",
-    caption = paste0("Nota: Datos ponderados. N = ", n_unw)
-  ) +
-  theme_minimal()
-
-grafico
-
-ggsave("output/graph1/class1_sexo_edad.png", plot = grafico, width = 10, height = 6, dpi = 300)
-```
-
-### c05_02 x clase
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c05_02_acuerdo,
-  x_var = wrightclass1_reduced,
-  title = "Acuerdo con: Una de las principales razones de la alta desigualdad en Chile \nes que los dueños de las empresas pagan poco a sus trabajadores",
-  subtitle = "Porcentaje según clase social",
-  x_label = "Clase social",
-  x_text_angle = 45,
-  single_fill = "#9e1b1e"
-)
-```
-
-### c05_02 x clase x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c05_02_acuerdo,
-  x_var = wrightclass1_reduced,
-  fill_var = sexo,
-  title = "Acuerdo con: Una de las principales razones de la alta desigualdad en Chile \nes que los dueños de las empresas pagan poco a sus trabajadores",
-  subtitle = "Porcentaje según sexo y clase social",
-  x_label = "Clase social",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 45
-)
-```
-
-### c05_03 x clase
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c05_03_acuerdo,
-  x_var = wrightclass1_reduced,
-  title = "Acuerdo con: El alto nivel de vida de los dueños de las empresas es resultado \nde lo poco que pagan a sus trabajadores",
-  subtitle = "Porcentaje según clase social",
-  x_label = "Clase social",
-  x_text_angle = 45,
-  single_fill = "#9e1b1e"
-)
-```
-
-### c05_03 x clase x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c05_03_acuerdo,
-  x_var = wrightclass1_reduced,
-  fill_var = sexo,
-  title = "Acuerdo con: El alto nivel de vida de los dueños de las empresas es resultado \nde lo poco que pagan a sus trabajadores",
-  subtitle = "Porcentaje según sexo y clase social",
-  x_label = "Clase social",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 45
-)
-```
-
-### c06_02 x clase
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c06_02_acuerdo,
-  x_var = wrightclass1_reduced,
-  title = "Acuerdo con: Apoyaría una reforma para crear un sistema solidario de reparto \nsi eso permite subir las pensiones",
-  subtitle = "Porcentaje según clase social",
-  x_label = "Clase social",
-  x_text_angle = 45,
-  single_fill = "#9e1b1e"
-)
-```
-
-### c06_02 x clase x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c06_02_acuerdo,
-  x_var = wrightclass1_reduced,
-  fill_var = sexo,
-  title = "Acuerdo con: Apoyaría una reforma para crear un sistema solidario de reparto \nsi eso permite subir las pensiones",
-  subtitle = "Porcentaje según sexo y clase social",
-  x_label = "Clase social",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 45
-)
-```
-
-### c07_01 x clase
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_01_acuerdo,
-  x_var = wrightclass1_reduced,
-  title = "Acuerdo con: Aumentar los impuestos a los más ricos para financiar \nprogramas sociales",
-  subtitle = "Porcentaje según clase social",
-  x_label = "Clase social",
-  x_text_angle = 45,
-  single_fill = "#9e1b1e"
-)
-```
-
-### c07_01 x clase x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_01_acuerdo,
-  x_var = wrightclass1_reduced,
-  fill_var = sexo,
-  title = "Acuerdo con: Aumentar los impuestos a los más ricos para financiar \nprogramas sociales",
-  subtitle = "Porcentaje según sexo y clase social",
-  x_label = "Clase social",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 45
-)
-```
-
-### c07_03 x clase
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_03_acuerdo,
-  x_var = wrightclass1_reduced,
-  title = "Acuerdo con: Implementar leyes para que los sindicatos tengan más poder \nde negociación",
-  subtitle = "Porcentaje según clase social",
-  x_label = "Clase social",
-  x_text_angle = 45,
-  single_fill = "#9e1b1e"
-)
-```
-
-### c07_03 x clase x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_03_acuerdo,
-  x_var = wrightclass1_reduced,
-  fill_var = sexo,
-  title = "Acuerdo con: Implementar leyes para que los sindicatos tengan más poder \nde negociación",
-  subtitle = "Porcentaje según sexo y clase social",
-  x_label = "Clase social",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 45
-)
-```
-
-### c07_04 x clase
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_04_acuerdo,
-  x_var = wrightclass1_reduced,
-  title = "Acuerdo con: Redistribuir las riquezas desde quienes tienen más recursos \nhacia quienes tienen menos recursos",
-  subtitle = "Porcentaje según clase social",
-  x_label = "Clase social",
-  x_text_angle = 45,
-  single_fill = "#9e1b1e"
-)
-```
-
-### c07_04 x clase x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_04_acuerdo,
-  x_var = wrightclass1_reduced,
-  fill_var = sexo,
-  title = "Acuerdo con: Redistribuir las riquezas desde quienes tienen más recursos \nhacia quienes tienen menos recursos",
-  subtitle = "Porcentaje según sexo y clase social",
-  x_label = "Clase social",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 45
-)
-```
-
-### c07_05 x clase
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_05_acuerdo,
-  x_var = wrightclass1_reduced,
-  title = "Acuerdo con: Promover la igualdad entre hombres y mujeres",
-  subtitle = "Porcentaje según clase social",
-  x_label = "Clase social",
-  x_text_angle = 45,
-  single_fill = "#9e1b1e"
-)
-```
-
-### c07_05 x clase x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_05_acuerdo,
-  x_var = wrightclass1_reduced,
-  fill_var = sexo,
-  title = "Acuerdo con: Promover la igualdad entre hombres y mujeres",
-  subtitle = "Porcentaje según sexo y clase social",
-  x_label = "Clase social",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 45
-)
-```
-
-### c07_06 x clase
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_06_acuerdo,
-  x_var = wrightclass1_reduced,
-  title = "Acuerdo con: Garantizar la educación universitaria pública y gratuita",
-  subtitle = "Porcentaje según clase social",
-  x_label = "Clase social",
-  x_text_angle = 45,
-  single_fill = "#9e1b1e"
-)
-```
-
-### c07_06 x clase x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_06_acuerdo,
-  x_var = wrightclass1_reduced,
-  fill_var = sexo,
-  title = "Acuerdo con: Garantizar la educación universitaria pública y gratuita",
-  subtitle = "Porcentaje según sexo y clase social",
-  x_label = "Clase social",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 45
-)
-```
-
-## Politización y sexo
-
-### polit x sexo x edad
-
-```{r}
-politizacion <- data_svy %>%
-  filter(!is.na(politizado),
-         !is.na(sexo),
-         !is.na(edad_tramos)) %>%
-  group_by(edad_tramos, sexo) %>%
-  summarise(prop = survey_mean(politizado,na.rm = TRUE)) %>%
-  ungroup()
-
-n_unw <- data_svy %>%
-  filter(!is.na(politizado), !is.na(sexo), !is.na(edad_tramos)) %>%
-  summarise(N = unweighted(n())) %>%
-  pull(N)
-
-ggplot(politizacion, aes(x = edad_tramos, y = prop, fill = sexo)) +
-  geom_col(position = position_dodge(width = 0.8)) +
-  geom_text(
-    aes(label = paste0(round(prop * 100, 1), "%")),
-    position = position_dodge(width = 0.8),
-    vjust = -0.5,
-    color = "black",
-    size = 4
-  ) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0, 1)) +
-  scale_fill_manual(values = c("Mujer" = "#f25f5c", "Hombre" = "#9e1b1e")) +
-  labs(
-    title = "Porcentaje de personas politizadas",
-    subtitle = "Según sexo y tramo etario",
-    x = "Tramo de edad",
-    y = "Porcentaje de personas politizadas",
-    fill = "Sexo",
-    caption = paste0("Nota: Datos ponderados. Politización definida como hablar de política (4–5) y confiar en partidos (3–5). N = ", n_unw)) +
-  theme_minimal()
-
-ggsave("output/graph1/politizacion_sexo_edad.png", width = 10, height = 6, dpi = 300)
-```
-
-### c05_02 x polit x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c05_02_acuerdo,
-  x_var = politizado,
-  fill_var = sexo,
-  title = "Acuerdo con: Una de las principales razones de la alta desigualdad en Chile \nes que los dueños de las empresas pagan poco a sus trabajadores",
-  subtitle = "Porcentaje según sexo y estatus de politización",
-  x_label = "Politizado",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 0
-)
-```
-
-### c05_03 x polit x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c05_03_acuerdo,
-  x_var = politizado,
-  fill_var = sexo,
-  title = "Acuerdo con: El alto nivel de vida de los dueños de las empresas es resultado \nde lo poco que pagan a sus trabajadores",
-  subtitle = "Porcentaje según sexo y estatus de politización",
-  x_label = "Politizado",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 0
-)
-```
-
-### c06_02 x polit x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c06_02_acuerdo,
-  x_var = politizado,
-  fill_var = sexo,
-  title = "Acuerdo con: Apoyaría una reforma para crear un sistema solidario de reparto \nsi eso permite subir las pensiones",
-  subtitle = "Porcentaje según sexo y estatus de politización",
-  x_label = "Politizado",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 0
-)
-```
-
-### c07_01 x polit x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_01_acuerdo,
-  x_var = politizado,
-  fill_var = sexo,
-  title = "Acuerdo con: Aumentar los impuestos a los más ricos para financiar \nprogramas sociales",
-  subtitle = "Porcentaje según sexo y estatus de politización",
-  x_label = "Politizado",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 0
-)
-```
-
-### c07_03 x polit x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_03_acuerdo,
-  x_var = politizado,
-  fill_var = sexo,
-  title = "Acuerdo con: Implementar leyes para que los sindicatos tengan más poder \nde negociación",
-  subtitle = "Porcentaje según sexo y estatus de politización",
-  x_label = "Politizado",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 0
-)
-```
-
-### c07_04 x polit x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_04_acuerdo,
-  x_var = politizado,
-  fill_var = sexo,
-  title = "Acuerdo con: Redistribuir las riquezas desde quienes tienen más recursos \nhacia quienes tienen menos recursos",
-  subtitle = "Porcentaje según sexo y estatus de politización",
-  x_label = "Politizado",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 0
-)
-```
-
-### c07_05 x polit x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_05_acuerdo,
-  x_var = politizado,
-  fill_var = sexo,
-  title = "Acuerdo con: Promover la igualdad entre hombres y mujeres",
-  subtitle = "Porcentaje según sexo y estatus de politización",
-  x_label = "Politizado",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 0
-)
-```
-
-### c07_06 x polit x sexo
-
-```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_06_acuerdo,
-  x_var = politizado,
-  fill_var = sexo,
-  title = "Acuerdo con: Garantizar la educación universitaria pública y gratuita",
-  subtitle = "Porcentaje según sexo y estatus de politización",
-  x_label = "Politizado",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 0
-)
-```
-
-### pol_id x sexo x edad
-
-```{r}
-# Calcular proporciones por sexo y edad
-pol_id_sexo_edad <- data_svy %>%
-  filter(
-    !is.na(sexo),
-    !is.na(edad_tramos),
-    !is.na(pol_id)
-  ) %>%
-  group_by(edad_tramos, sexo, pol_id) %>%
-  summarise(prop = survey_mean(na.rm = TRUE)) %>%
-  ungroup()
-
-n_unw <- data_svy %>%
-  filter(
-    !is.na(sexo),
-    !is.na(edad_tramos),
-    !is.na(pol_id)
-  ) %>%
-  summarise(N = unweighted(n())) %>%
-  pull(N)
-
-# Graficar
-grafico <- ggplot(pol_id_sexo_edad, aes(x = edad_tramos, y = prop, fill = pol_id)) +
-  geom_col(position = "fill", color = "white") +
-  geom_text(
-    aes(label = ifelse(prop > 0.04, paste0(round(prop * 100, 1), "%"), "")),  # mostrar solo si es >4%
-    position = position_fill(vjust = 0.5),
-    color = "white",
-    size = 3.5
-  ) +
-  facet_wrap(~sexo) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  scale_fill_manual(
-    values = c(
-      "Izquierda" = "#6f0000",
-      "Centro" = "#9e1b1e",
-      "Derecha" = "#ca0000",
-      "No se identifica" = "#ff5651"
-  )) +
-  labs(
-    title = "Identificación política",
-    subtitle = "Porcentajes según sexo y tramo etario",
-    x = "Tramo de edad",
-    y = "Porcentaje",
-    fill = "Identificación política",
-    caption = paste0("Nota: Datos ponderados. N = ", n_unw)
-  ) +
-  theme_minimal()
-
-grafico
-
-ggsave("output/graph1/pol_id_sexo_edad.png", plot = grafico, width = 10, height = 6, dpi = 300)
-```
-
-## Clase 2 y sexo
-
-### clase 2 reduced
-
-```{r}
-# Calcular proporciones ponderadas solo por clase social
-tabla_total <- data_svy %>%
-  filter(!is.na(wrightclass2_reduced)) %>% 
-  group_by(wrightclass2_reduced) %>%
-  summarise(prop = survey_mean(vartype = NULL, proportion = TRUE)) %>%
-  ungroup()
-
-n_unw <- data_svy %>%
-  filter(!is.na(wrightclass2_reduced)) %>%
-  summarise(N = unweighted(n())) %>%
-  pull(N)
-
-# Gráfico
-ggplot(tabla_total, aes(x = wrightclass2_reduced, y = prop)) +
-  geom_col(fill = "#9e1b1e") +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  geom_text(
-    aes(label = paste0(round(prop * 100, 1), "%")),
-    vjust = -0.3,
-    color = "black",
-    size = 3
-  ) +
-  labs(
-    title = "Distribución de la población por clase social",
-    caption = paste0("Fuente: Elaboración propia con datos de la Encuesta Conclat Chile 2024. Datos ponderados. N = ", n_unw),
-    x = "Clase social",
-    y = "Porcentaje"
-  ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-ggsave("output/graph1/class2.png", width = 10, height = 6, dpi = 300)
-```
-
-### clase x sexo
-
-```{r}
-# Calcular totales ponderados por clase x sexo
-tabla_total <- data_svy %>%
-  filter(!is.na(wrightclass2_reduced), !is.na(sexo)) %>%
-  group_by(wrightclass2_reduced, sexo) %>%
-  summarise(n = survey_total(vartype = NULL)) %>%
-  ungroup() %>%
-  # (opcional) asegurar combinaciones faltantes con 0
-  complete(wrightclass2_reduced, sexo, fill = list(n = 0)) %>%
-  group_by(sexo) %>%
-  mutate(prop = n / sum(n)) %>%      # proporción dentro de cada sexo
-  ungroup()
-
-n_unw <- data_svy %>%
-  filter(!is.na(wrightclass2_reduced), !is.na(sexo)) %>%
-  summarise(N = unweighted(n())) %>%
-  pull(N)
-
-# Gráfico: barras agrupadas (dodge), normalizadas dentro de cada sexo
-ggplot(tabla_total, aes(x = wrightclass2_reduced, y = prop, fill = sexo)) +
-  geom_col(position = position_dodge(width = 0.8)) +
-  scale_fill_manual(values = c("Mujer" = "#f25f5c", "Hombre" = "#9e1b1e")) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  geom_text(
-    aes(label = paste0(round(prop * 100, 1), "%")),
-    position = position_dodge(width = 0.8),
-    vjust = -0.3,
-    size = 2.8
-  ) +
-  labs(
-    title = "Distribución por clase social dentro de cada sexo",
-    x = "Clase social",
-    y = "Porcentaje",
-    fill = "Sexo",
-    caption = paste0("Fuente: Elaboración propia con datos de la Encuesta Conclat Chile 2024. Datos ponderados. N = ", n_unw)
-  ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-ggsave("output/graph1/class2_sexo.png", width = 10, height = 6, dpi = 300)
-```
-
-### sexo x clase
-
-```{r}
-# Calcular proporciones ponderadas por clase social y sexo
-tabla_total <- data_svy %>%
-  filter(
-    !is.na(wrightclass2_reduced),
-    !is.na(sexo)
+frq(data$b29)
+
+data <- data %>%
+  mutate(
+    b29_dummy = case_when(
+      b29 %in% c(3, 4,5) ~ 1,
+      b29 %in% c(1, 2, -888, -999) ~ 0,
+    )
   ) %>% 
-  group_by(wrightclass2_reduced, sexo) %>%
-  summarise(prop = survey_mean(vartype = NULL, proportion = TRUE)) %>%
-  ungroup()
-
-n_unw <- data_svy %>%
-  filter(!is.na(wrightclass2_reduced), !is.na(sexo)) %>%
-  summarise(N = unweighted(n())) %>%
-  pull(N)
-
-# Gráfico
-ggplot(tabla_total, aes(x = wrightclass2_reduced, y = prop, fill = sexo)) +
-  geom_col(position = "dodge") +
-  scale_fill_manual(values = c("Mujer" = "#f25f5c", "Hombre" = "#9e1b1e")) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  geom_text(
-    aes(label = round(prop * 100, 1)),
-    position = position_dodge(width = 0.8),
-    vjust = 1.3,
-    color = "white",
-    size = 3
-  ) +
-  labs(
-    title = "Porcentaje de hombres y mujeres en cada categoría de clase social",
-    caption = paste0("Fuente: Elaboración propia con datos de la Encuesta Conclat Chile 2024. Datos ponderados. N = ", n_unw),
-    x = "Clase social",
-    y = "Porcentaje",
-    fill = "Sexo"
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
+  set_variable_labels(b29_dummy = "Intention to unionize (1 = yes)") %>% 
+  set_value_labels(b29_dummy = c(
+    "Yes" = 1,
+    "No" = 0
+  )
   )
 
-ggsave("output/graph1/class2_sexo_by_class.png", width = 10, height = 6, dpi = 300)
+frq(data$b29_dummy)
 ```
 
-### sexo x clase 2
+### --- Políticas ---
+
+### c01_01
 
 ```{r}
-# Totales ponderados por clase x sexo y proporciones dentro de cada clase
-tabla_total <- data_svy %>%
-  filter(!is.na(wrightclass2_reduced), !is.na(sexo)) %>%
-  group_by(wrightclass2_reduced, sexo) %>%
-  summarise(n = survey_total(vartype = NULL)) %>%   # totales ponderados
-  group_by(wrightclass2_reduced) %>%
-  mutate(prop = n / sum(n)) %>%                     # % dentro de cada clase
-  ungroup()
+# c01_01: Importancia: mejores salarios
+frq(data$c01_01)
 
-n_unw <- data_svy %>%
-  filter(!is.na(wrightclass2_reduced), !is.na(sexo)) %>%
-  summarise(N = unweighted(n())) %>%
-  pull(N)
-
-# Gráfico apilado (cada barra suma 100%)
-ggplot(tabla_total, aes(x = wrightclass2_reduced, y = prop, fill = sexo)) +
-  geom_col(position = "stack") +
-  scale_fill_manual(values = c("Mujer" = "#f25f5c", "Hombre" = "#9e1b1e")) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  geom_text(
-    aes(label = paste0(round(prop * 100, 1), "%")),
-    position = position_stack(vjust = 0.5),
-    color = "white",
-    size = 2.8
-  ) +
-  labs(
-    title = "Composición por sexo dentro de cada clase social",
-    caption = paste0("Fuente: Elaboración propia con datos de la Encuesta Conclat Chile 2024. Datos ponderados. N = ", n_unw),
-    x = "Clase social",
-    y = "Porcentaje dentro de la clase",
-    fill = "Sexo"
-  ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-ggsave("output/graph1/class2_sexo_by_class_2.png", width = 10, height = 6, dpi = 300)
-```
-
-### clase x sexo x edad
-
-```{r}
-# Calcular proporciones por sexo y edad
-class1_sexo_edad <- data_svy %>%
-  filter(
-    !is.na(sexo),
-    !is.na(edad_tramos),
-    !is.na(wrightclass2_reduced)
+data <- data %>%
+  mutate(
+    c01_01 = ifelse(c01_01 %in% c(-999, -888), NA, c01_01)
   ) %>%
-  group_by(edad_tramos, sexo, wrightclass2_reduced) %>%
-  summarise(prop = survey_mean(na.rm = TRUE)) %>%
-  ungroup()
+  set_variable_labels(c01_01 = "Level of importance of unions: in wages and working conditions (c01_01)")
 
-n_unw <- data_svy %>%
-  filter(!is.na(wrightclass2_reduced), !is.na(sexo), !is.na(edad_tramos)) %>%
-  summarise(N = unweighted(n())) %>%
-  pull(N)
-
-# Graficar
-grafico <- ggplot(class1_sexo_edad, aes(x = edad_tramos, y = prop, fill = wrightclass2_reduced)) +
-  geom_col(position = "fill", color = "white") +
-  geom_text(
-    aes(label = ifelse(prop > 0.04, paste0(round(prop * 100, 1), "%"), "")),  # mostrar solo si es >4%
-    position = position_fill(vjust = 0.5),
-    color = "white",
-    size = 3.5
-  ) +
-  facet_wrap(~sexo) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  scale_fill_manual(
-    values = c(
-      "1. Formal workers" = "#6f0000",
-      "2. Informal workers" = "#9e1b1e",
-      "3. Informal self-employed" = "#ca0000",
-      "4. Experts" = "#ff5651",
-      "5. Supervisors" ="#b23a48",
-      "6. Managers" = "#8c1d40",
-      "7. Petty bourgeoisie" = "#d1eaf3",
-      "8. Small employers" = "#0f6481",
-      "9. Employers" = "#083342"
-  )) +
-  labs(
-    title = "Clases",
-    subtitle = "Porcentajes según sexo y tramo etario",
-    x = "Tramo de edad",
-    y = "Porcentaje",
-    fill = "Clases",
-    caption = paste0("Nota: Datos ponderados. N = ", n_unw)
-  ) +
-  theme_minimal()
-
-grafico
-
-ggsave("output/graph1/class2_sexo_edad.png", plot = grafico, width = 10, height = 6, dpi = 300)
+frq(data$c01_01)
 ```
 
-### c05_02 x clase
+### c01_02
 
 ```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c05_02_acuerdo,
-  x_var = wrightclass2_reduced,
-  title = "Acuerdo con: Una de las principales razones de la alta desigualdad en Chile \nes que los dueños de las empresas pagan poco a sus trabajadores",
-  subtitle = "Porcentaje según clase social",
-  x_label = "Clase social",
-  x_text_angle = 45,
-  single_fill = "#9e1b1e"
-)
+frq(data$c01_02)
+
+data <- data %>%
+  mutate(
+    c01_02 = ifelse(c01_02 %in% c(-999, -888), NA, c01_02)
+  ) %>%
+  set_variable_labels(c01_02 = "Level of importance of unions: in reducing inequality (c01_02)")
+
+frq(data$c01_02)
 ```
 
-### c05_02 x clase x sexo
+### c01_02
 
 ```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c05_02_acuerdo,
-  x_var = wrightclass2_reduced,
-  fill_var = sexo,
-  title = "Acuerdo con: Una de las principales razones de la alta desigualdad en Chile \nes que los dueños de las empresas pagan poco a sus trabajadores",
-  subtitle = "Porcentaje según sexo y clase social",
-  x_label = "Clase social",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 45
-)
+frq(data$c01_03)
+
+data <- data %>%
+  mutate(
+    c01_03 = ifelse(c01_03 %in% c(-999, -888), NA, c01_03)
+  ) %>%
+  set_variable_labels(c01_03 = "Level of importance of unions: in protecting the rights of working women (c01_03)")
+
+frq(data$c01_03)
 ```
 
-### c05_03 x clase
+### c01_04
 
 ```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c05_03_acuerdo,
-  x_var = wrightclass2_reduced,
-  title = "Acuerdo con: El alto nivel de vida de los dueños de las empresas es resultado \nde lo poco que pagan a sus trabajadores",
-  subtitle = "Porcentaje según clase social",
-  x_label = "Clase social",
-  x_text_angle = 45,
-  single_fill = "#9e1b1e"
-)
+frq(data$c01_04)
+
+data <- data %>%
+  mutate(
+    c01_04 = ifelse(c01_04 %in% c(-999, -888), NA, c01_04)
+  ) %>%
+  set_variable_labels(c01_04 = "Level of importance of unions: in protecting the rights of informal workers (c01_04)")
+
+frq(data$c01_04)
 ```
 
-### c05_03 x clase x sexo
+### c05_02
 
 ```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c05_03_acuerdo,
-  x_var = wrightclass2_reduced,
-  fill_var = sexo,
-  title = "Acuerdo con: El alto nivel de vida de los dueños de las empresas es resultado \nde lo poco que pagan a sus trabajadores",
-  subtitle = "Porcentaje según sexo y clase social",
-  x_label = "Clase social",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 45
-)
+# c05_02: Acuerdo: desigualdad es porque dueños empresa pagan poco
+frq(data$c05_02)
+
+data <- data %>%
+  mutate(
+    c05_02 = ifelse(c05_02 %in% c(-999, -888), NA, c05_02)
+  ) %>%
+  set_variable_labels(c05_02 = "Level of agreement with: A major reason for high inequality in Chile is that business owners pay their workers little (c05_02)")
+
+frq(data$c05_02)
 ```
 
-### c06_02 x clase
+### c05_02_dummy
 
 ```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c06_02_acuerdo,
-  x_var = wrightclass2_reduced,
-  title = "Acuerdo con: Apoyaría una reforma para crear un sistema solidario de reparto \nsi eso permite subir las pensiones",
-  subtitle = "Porcentaje según clase social",
-  x_label = "Clase social",
-  x_text_angle = 45,
-  single_fill = "#9e1b1e"
-)
+# Crear variable dicotómica: acuerdo (4 o 5)
+data <- data %>%
+  mutate(
+    c05_02_dummy = ifelse(
+      c05_02 %in% c(4, 5), 1, 0)
+    ) %>%
+  set_variable_labels(c05_02_dummy = "Agree or Strongly agree: inequality exists because business owners pay too little") %>% 
+  set_value_labels(c05_02_dummy = c(
+    "Agree or Strongly agree (4,5)" = 1,
+    "Disagree (1,2,3)" = 0
+  ))
+
+frq(data$c05_02_dummy)
 ```
 
-### c06_02 x clase x sexo
+### c05_03
 
 ```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c06_02_acuerdo,
-  x_var = wrightclass2_reduced,
-  fill_var = sexo,
-  title = "Acuerdo con: Apoyaría una reforma para crear un sistema solidario de reparto \nsi eso permite subir las pensiones",
-  subtitle = "Porcentaje según sexo y clase social",
-  x_label = "Clase social",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 45
-)
+# c05:03: Acuerdo: alto nivel vida dueños empresas es por pagar poco
+frq(data$c05_03)
+
+data <- data %>%
+  mutate(
+    c05_03 = ifelse(c05_03 %in% c(-999, -888), NA, c05_03)
+  ) %>%
+  set_variable_labels(c05_03 = "Level of agreement with: High standard of living for business owners is due to paying little (c05_03)")
+
+frq(data$c05_03)
 ```
 
-### c07_01 x clase
+### c05_03_dummy
 
 ```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_01_acuerdo,
-  x_var = wrightclass2_reduced,
-  title = "Acuerdo con: Aumentar los impuestos a los más ricos para financiar \nprogramas sociales",
-  subtitle = "Porcentaje según clase social",
-  x_label = "Clase social",
-  x_text_angle = 45,
-  single_fill = "#9e1b1e"
-)
+# Crear variable dicotómica: acuerdo (4 o 5)
+data <- data %>%
+  mutate(
+    c05_03_dummy = ifelse(
+      c05_03 %in% c(4, 5), 1, 0)
+    ) %>%
+  set_variable_labels(c05_03_dummy = "Agree or Strongly agree: High standard of living for business owners is due to paying little") %>% 
+  set_value_labels(c05_03_dummy = c(
+    "Agree or Strongly agree (4,5)" = 1,
+    "Disagree (1,2,3)" = 0
+  ))
+
+frq(data$c05_03_dummy)
 ```
 
-### c07_01 x clase x sexo
+### c06_02
 
 ```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_01_acuerdo,
-  x_var = wrightclass2_reduced,
-  fill_var = sexo,
-  title = "Acuerdo con: Aumentar los impuestos a los más ricos para financiar \nprogramas sociales",
-  subtitle = "Porcentaje según sexo y clase social",
-  x_label = "Clase social",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 45
-)
+# c06_02: Acuerdo: apoyo sistema solidario de reparto
+frq(data$c06_02)
+
+data <- data %>%
+  mutate(
+    c06_02 = ifelse(c06_02 %in% c(-999, -888), NA, c06_02)
+  ) %>%
+  set_variable_labels(c06_02 = "Level of agreement with: support for the solidarity-based distribution system(c06_02)")
+
+frq(data$c06_02)
 ```
 
-### c07_03 x clase
+### c06_02_dummy
 
 ```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_03_acuerdo,
-  x_var = wrightclass2_reduced,
-  title = "Acuerdo con: Implementar leyes para que los sindicatos tengan más poder \nde negociación",
-  subtitle = "Porcentaje según clase social",
-  x_label = "Clase social",
-  x_text_angle = 45,
-  single_fill = "#9e1b1e"
-)
+# Crear variable dicotómica: acuerdo (4 o 5)
+data <- data %>%
+  mutate(
+    c06_02_dummy = ifelse(
+      c06_02 %in% c(4, 5), 1, 0)
+  ) %>%
+  set_variable_labels(c06_02_dummy = "Agree or Strongly agree: support for the solidarity-based distribution system") %>% 
+  set_value_labels(c06_02_dummy = c(
+    "Agree or Strongly agree (4,5)" = 1,
+    "Disagree (1,2,3)" = 0
+  ))
+
+frq(data$c06_02_dummy)
 ```
 
-### c07_03 x clase x sexo
+### c07_01
 
 ```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_03_acuerdo,
-  x_var = wrightclass2_reduced,
-  fill_var = sexo,
-  title = "Acuerdo con: Implementar leyes para que los sindicatos tengan más poder \nde negociación",
-  subtitle = "Porcentaje según sexo y clase social",
-  x_label = "Clase social",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 45
-)
+# Acuerdo: aumentar impuestos a los más ricos
+frq(data$c07_01)
+
+data <- data %>%
+  mutate(
+    c07_01 = ifelse(c07_01 %in% c(-999, -888), NA, c07_01)
+  ) %>%
+  set_variable_labels(c07_01 = "Level of agreement with: Increase taxes on the wealthiest to fund social programs (c07_01)")
+
+frq(data$c07_01)
 ```
 
-### c07_04 x clase
+### c07_01_dummy
 
 ```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_04_acuerdo,
-  x_var = wrightclass2_reduced,
-  title = "Acuerdo con: Redistribuir las riquezas desde quienes tienen más recursos \nhacia quienes tienen menos recursos",
-  subtitle = "Porcentaje según clase social",
-  x_label = "Clase social",
-  x_text_angle = 45,
-  single_fill = "#9e1b1e"
-)
+# Crear variable dicotómica: acuerdo (4 o 5)
+data <- data %>%
+  mutate(
+    c07_01_dummy = ifelse(
+      c07_01 %in% c(4, 5), 1, 0)
+  ) %>%
+  set_variable_labels(c07_01_dummy = "Agree or Strongly agree: Increase taxes on the wealthiest to fund social programs") %>% 
+  set_value_labels(c07_01_dummy = c(
+    "Agree or Strongly agree (4,5)" = 1,
+    "Disagree (1,2,3)" = 0
+  ))
+
+frq(data$c07_01_dummy)
 ```
 
-### c07_04 x clase x sexo
+### c07_03
 
 ```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_04_acuerdo,
-  x_var = wrightclass2_reduced,
-  fill_var = sexo,
-  title = "Acuerdo con: Redistribuir las riquezas desde quienes tienen más recursos \nhacia quienes tienen menos recursos",
-  subtitle = "Porcentaje según sexo y clase social",
-  x_label = "Clase social",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 45
-)
+# Acuerdo: sindicatos tengan más poder
+frq(data$c07_03)
+
+data <- data %>%
+  mutate(
+    c07_03 = ifelse(c07_03 %in% c(-999, -888), NA, c07_03)
+  ) %>%
+  set_variable_labels(c07_03 = "Level of agreement with: Implement laws to give unions more bargaining power (c07_03)")
+
+frq(data$c07_03)
 ```
 
-### c07_05 x clase
+### c07_03_dummy
 
 ```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_05_acuerdo,
-  x_var = wrightclass2_reduced,
-  title = "Acuerdo con: Promover la igualdad entre hombres y mujeres",
-  subtitle = "Porcentaje según clase social",
-  x_label = "Clase social",
-  x_text_angle = 45,
-  single_fill = "#9e1b1e"
-)
+# Crear variable dicotómica: acuerdo (4 o 5)
+data <- data %>%
+  mutate(
+    c07_03_dummy = ifelse(
+      c07_03 %in% c(4, 5), 1, 0)
+  ) %>%
+  set_variable_labels(c07_03_dummy = "Agree or Strongly agree: Implement laws to give unions more bargaining power") %>% 
+  set_value_labels(c07_03_dummy = c(
+    "Agree or Strongly agree (4,5)" = 1,
+    "Disagree (1,2,3)" = 0
+  ))
+
+frq(data$c07_03_dummy)
 ```
 
-### c07_05 x clase x sexo
+### c07_04
 
 ```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_05_acuerdo,
-  x_var = wrightclass2_reduced,
-  fill_var = sexo,
-  title = "Acuerdo con: Promover la igualdad entre hombres y mujeres",
-  subtitle = "Porcentaje según sexo y clase social",
-  x_label = "Clase social",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 45
-)
+# Acuerdo: redistribuir riquezas
+frq(data$c07_04)
+
+data <- data %>%
+  mutate(
+    c07_04 = ifelse(c07_04 %in% c(-999, -888), NA, c07_04)
+  ) %>%
+  set_variable_labels(c07_04 = "Level of agreement with: Redistribute wealth from those with more resources to those with fewer resources (c07_04)")
+
+frq(data$c07_04)
 ```
 
-### c07_06 x clase
+### c07_04_dummy
 
 ```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_06_acuerdo,
-  x_var = wrightclass2_reduced,
-  title = "Acuerdo con: Garantizar la educación universitaria pública y gratuita",
-  subtitle = "Porcentaje según clase social",
-  x_label = "Clase social",
-  x_text_angle = 45,
-  single_fill = "#9e1b1e"
-)
+# Crear variable dicotómica: acuerdo (4 o 5)
+data <- data %>%
+  mutate(
+    c07_04_dummy = ifelse(
+      c07_04 %in% c(4, 5), 1, 0)
+  ) %>%
+  set_variable_labels(c07_04_dummy = "Agree or Strongly agree: Redistribute wealth from those with more resources to those with fewer resources") %>% 
+  set_value_labels(c07_04_dummy = c(
+    "Agree or Strongly agree (4,5)" = 1,
+    "Disagree (1,2,3)" = 0
+  ))
+
+frq(data$c07_04_dummy)
 ```
 
-### c07_06 x clase x sexo
+### c07_05
 
 ```{r}
-plot_binary_by(
-  data = data_svy,
-  var = c07_06_acuerdo,
-  x_var = wrightclass2_reduced,
-  fill_var = sexo,
-  title = "Acuerdo con: Garantizar la educación universitaria pública y gratuita",
-  subtitle = "Porcentaje según sexo y clase social",
-  x_label = "Clase social",
-  fill_label = "Sexo",
-  palette = c("Mujer"="#f25f5c","Hombre"="#9e1b1e"),
-  x_text_angle = 45
-)
+# Acuerdo: igualdad hombres y mujeres
+frq(data$c07_05)
+
+data <- data %>%
+  mutate(
+    c07_05 = ifelse(c07_05 %in% c(-999, -888), NA, c07_05)
+  ) %>%
+  set_variable_labels(c07_05 = "Level of agreement with: Promote equality between men and women (c07_05)")
+
+frq(data$c07_05)
+```
+
+### c07_05_dummy
+
+```{r}
+# Crear variable dicotómica: acuerdo (4 o 5)
+data <- data %>%
+  mutate(
+    c07_05_dummy = ifelse(
+      c07_05 %in% c(4, 5), 1, 0)
+  ) %>%
+  set_variable_labels(c07_05_dummy = "Agree or Strongly agree: Promote equality between men and women") %>% 
+  set_value_labels(c07_05_dummy = c(
+    "Agree or Strongly agree (4,5)" = 1,
+    "Disagree (1,2,3)" = 0
+  ))
+
+frq(data$c07_05_dummy)
+```
+
+### c07_06
+
+```{r}
+# Acuerdo: educación universitaria pública
+frq(data$c07_06)
+
+data <- data %>%
+  mutate(
+    c07_06 = ifelse(c07_06 %in% c(-999, -888), NA, c07_06)
+  ) %>%
+  set_variable_labels(c07_06 = "Level of agreement with: Guarantee free public university education (c07_06)")
+
+frq(data$c07_06)
+```
+
+### c07_06_dummy
+
+```{r}
+# Crear variable dicotómica: acuerdo (4 o 5)
+data <- data %>%
+  mutate(
+    c07_06_dummy = ifelse(
+      c07_06 %in% c(4, 5), 1, 0)
+  ) %>%
+  set_variable_labels(c07_06_dummy = "Agree or Strongly agree: Guarantee free public university education") %>% 
+  set_value_labels(c07_06_dummy = c(
+    "Agree or Strongly agree (4,5)" = 1,
+    "Disagree (1,2,3)" = 0
+  ))
+
+frq(data$c07_06_dummy)
+```
+
+### pol_id
+
+```{r}
+frq(data$c08)
+
+data <- data %>%
+  mutate(
+    pol_id = case_when(
+      c08 %in% c(0, 1, 2, 3) ~ 1,
+      c08 %in% c(4, 5, 6) ~ 2,
+      c08 %in% c(7, 8, 9, 10) ~ 3,
+      c08 %in% c(11, 12, -888, -999) ~ 4,
+      TRUE ~ NA_real_
+    ),
+    pol_id = factor(
+      pol_id, 
+      levels = 1:4, 
+      labels = c(
+        "Left", 
+        "Center", 
+        "Right", 
+        "Not identified"
+        ) 
+      )
+    ) %>%
+  set_variable_labels(pol_id = "Political identification") 
+
+frq(data$pol_id)
+```
+
+### politizado
+
+```{r}
+frq(data$c10_01)
+frq(data$c15_01)
+
+data <- data %>%
+  mutate(
+    politizado = if_else(
+      c10_01 %in% c(4, 5) & c15_01 %in% c(3, 4, 5), 1, 0)
+  ) %>% 
+  set_variable_labels(politizado = "Politicized or non-politicized") %>% 
+  set_value_labels(politizado = c(
+    "Yes" = 1,
+    "No" = 0
+  ))
+
+frq(data$politizado)
+```
+
+## Guardar datos
+
+```{r}
+dim(data)
+names(data)
+
+saveRDS(data,file="output/data/data-cl-paperclar.rds")
 ```
