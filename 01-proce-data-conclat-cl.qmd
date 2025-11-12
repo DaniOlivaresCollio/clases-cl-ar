@@ -387,9 +387,9 @@ data <- data %>%
   mutate(
     union_member = case_when(
       as.numeric(relation_mop) == 3 & b21 %in% c(1, 2) ~ 1,
-      as.numeric(relation_mop) == 3 & b21 %in% c(3, -888, -999) ~ 0,
+      as.numeric(relation_mop) == 3 & b21 %in% c(3, -888, -999, NA) ~ 0,
       as.numeric(relation_mop) %in% c(1, 2) & b25 == 1 ~ 1,
-      as.numeric(relation_mop) %in% c(1, 2) & b25 %in% c(3, 4, -888, -999) ~ 0,
+      as.numeric(relation_mop) %in% c(1, 2) & b25 %in% c(2, 3, 4, -888, -999, NA) ~ 0,
     )) %>%
   set_variable_labels(union_member = "Union membership (1 = yes)") %>% 
   set_value_labels(union_member = c(
