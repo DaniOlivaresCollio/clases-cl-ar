@@ -1,4 +1,6 @@
-# Procesamiento Data Conclat
+# Procesamiento Data Conclat Chile
+
+Capítulo para el procesamiento de la data Conclat Chile.
 
 ```{r,echo=FALSE,warning=FALSE,message=FALSE}
 rm(list=ls())
@@ -67,6 +69,20 @@ data <- data %>%
     female,                      # female  
     age,                         # edad
     educ,                        # educación
+    wrightclass1_original,       # clase
+    wrightclass2_capitalists,
+    wrightclass1_informal,
+    wrightclass2_informal,
+    wrightclass1_reduced,
+    wrightclass2_reduced,
+    wrightclass1_reduced2,
+    wrightclass1_reduced3,
+    wrightclass2_reduced3,
+    wrightclass1_reduced4,
+    wrightclass2_reduced4,
+    wrightclass1_reduced5,
+    wrightclass1_reduced6,
+    wrightclass1_reduced7,
     
     # Relación con los medios de producción
     a07,                         # employment situation
@@ -155,7 +171,7 @@ frq(data$age_br)
 frq(data$educ)
 ```
 
-### Relación con los medios de producción 
+### Relación con los medios de producción
 
 #### sit_empleo
 

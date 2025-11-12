@@ -9,7 +9,7 @@ book:
   chapters:
     - index.qmd
     - 01-proce-data-conclat-cl.qmd
-    - 02-proce-data-conclat-ar.qmd
+    # - 02-proce-data-conclat-ar.qmd
     # - references.qmd
 
 bibliography: references.bib
