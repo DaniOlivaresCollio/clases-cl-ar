@@ -185,7 +185,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#workplace_size" id="toc-workplace_size" class="nav-link" data-scroll-target="#workplace_size"><span class="header-section-number">1.3.13</span> workplace_size</a></li>
   <li><a href="#unions" id="toc-unions" class="nav-link" data-scroll-target="#unions"><span class="header-section-number">1.3.14</span> unions</a></li>
   <li><a href="#union_member" id="toc-union_member" class="nav-link" data-scroll-target="#union_member"><span class="header-section-number">1.3.15</span> union_member</a></li>
-  <li><a href="#prob_unionmem" id="toc-prob_unionmem" class="nav-link" data-scroll-target="#prob_unionmem"><span class="header-section-number">1.3.16</span> prob_unionmem</a></li>
+  <li><a href="#b29_dummy" id="toc-b29_dummy" class="nav-link" data-scroll-target="#b29_dummy"><span class="header-section-number">1.3.16</span> b29_dummy</a></li>
   <li><a href="#políticas" id="toc-políticas" class="nav-link" data-scroll-target="#políticas"><span class="header-section-number">1.3.17</span> — Políticas —</a></li>
   <li><a href="#c01_01" id="toc-c01_01" class="nav-link" data-scroll-target="#c01_01"><span class="header-section-number">1.3.18</span> c01_01</a></li>
   <li><a href="#c01_02" id="toc-c01_02" class="nav-link" data-scroll-target="#c01_02"><span class="header-section-number">1.3.19</span> c01_02</a></li>
@@ -264,40 +264,41 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    wrightclass2_reduced,</span>
 <span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    wrightclass1_reduced2,</span>
 <span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    wrightclass1_reduced3,</span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    wrightclass2_reduced3,</span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    wrightclass1_reduced4,</span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    wrightclass2_reduced4,</span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    wrightclass1_reduced5,</span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    wrightclass1_reduced6,</span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    wrightclass1_reduced7,</span>
-<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Relación con los medios de producción</span></span>
-<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    a07,                         <span class="co"># employment situation</span></span>
-<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    a25_rec,                     <span class="co"># rama</span></span>
-<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>    a26,                         <span class="co"># tamaño empresa</span></span>
-<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>    a27,                         <span class="co"># tamaño local  </span></span>
-<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    b19,                         <span class="co"># sindicatos en empresa</span></span>
-<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    b21,                         <span class="co"># afiliación sindical</span></span>
-<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>    b29,                         <span class="co"># probb unirse a sindicato</span></span>
-<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    b25,                         <span class="co"># afiliacion otras organizaciones</span></span>
-<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Políticas</span></span>
-<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>    c01_01,                      <span class="co"># Importancia: mejores salarios</span></span>
-<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>    c01_02,                      <span class="co"># Importancia: reducir dedsigualdad</span></span>
-<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>    c01_03,                      <span class="co"># Importancia: derechos mujeres</span></span>
-<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>    c01_04,                      <span class="co"># Importancia: derechos informales</span></span>
-<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>    c05_02,                      <span class="co"># Acuerdo: desigualda es porque dueños empresa pagan poco</span></span>
-<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>    c05_03,                      <span class="co"># Acuerdo: alto nivel vida dueños empresas es por pagar poco</span></span>
-<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>    c06_02,                      <span class="co"># Acuerdo: apoyo sistema solidario de reparto</span></span>
-<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>    c07_01,                      <span class="co"># Acuerdo: aumentar impuestos a los más ricos</span></span>
-<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>    c07_03,                      <span class="co"># Acuerdo: sindicatos tengan más poder</span></span>
-<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>    c07_04,                      <span class="co"># Acuerdo: redistribuir riquezas</span></span>
-<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>    c07_05,                      <span class="co"># Acuerdo: igualdad hombres y mujeres</span></span>
-<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>    c07_06,                      <span class="co"># Acuerdo: educación universitaria pública</span></span>
-<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>    c08,                         <span class="co"># posición política</span></span>
-<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>    c10_01,                      <span class="co"># habla de politica con amigos</span></span>
-<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>    c15_01                       <span class="co"># confia en partidos políticos</span></span>
-<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    wrightclass1_reduced3_v2,</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    wrightclass2_reduced3,</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    wrightclass1_reduced4,</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    wrightclass2_reduced4,</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    wrightclass1_reduced5,</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    wrightclass1_reduced6,</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    wrightclass1_reduced7,</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Relación con los medios de producción</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    a07,                         <span class="co"># employment situation</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>    a25_rec,                     <span class="co"># rama</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>    a26,                         <span class="co"># tamaño empresa</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    a27,                         <span class="co"># tamaño local  </span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    b19,                         <span class="co"># sindicatos en empresa</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>    b21,                         <span class="co"># afiliación sindical</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    b29,                         <span class="co"># probb unirse a sindicato</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>    b25,                         <span class="co"># afiliacion otras organizaciones</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Políticas</span></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>    c01_01,                      <span class="co"># Importancia: mejores salarios</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>    c01_02,                      <span class="co"># Importancia: reducir dedsigualdad</span></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>    c01_03,                      <span class="co"># Importancia: derechos mujeres</span></span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>    c01_04,                      <span class="co"># Importancia: derechos informales</span></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>    c05_02,                      <span class="co"># Acuerdo: desigualda es porque dueños empresa pagan poco</span></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>    c05_03,                      <span class="co"># Acuerdo: alto nivel vida dueños empresas es por pagar poco</span></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>    c06_02,                      <span class="co"># Acuerdo: apoyo sistema solidario de reparto</span></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>    c07_01,                      <span class="co"># Acuerdo: aumentar impuestos a los más ricos</span></span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>    c07_03,                      <span class="co"># Acuerdo: sindicatos tengan más poder</span></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>    c07_04,                      <span class="co"># Acuerdo: redistribuir riquezas</span></span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>    c07_05,                      <span class="co"># Acuerdo: igualdad hombres y mujeres</span></span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>    c07_06,                      <span class="co"># Acuerdo: educación universitaria pública</span></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>    c08,                         <span class="co"># posición política</span></span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>    c10_01,                      <span class="co"># habla de politica con amigos</span></span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>    c15_01                       <span class="co"># confia en partidos políticos</span></span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="procesamiento" class="level2" data-number="1.3">
@@ -902,8 +903,8 @@ Value | Label |    N | Raw % | Valid % | Cum. %
 </div>
 </div>
 </section>
-<section id="prob_unionmem" class="level3" data-number="1.3.16">
-<h3 data-number="1.3.16" class="anchored" data-anchor-id="prob_unionmem"><span class="header-section-number">1.3.16</span> prob_unionmem</h3>
+<section id="b29_dummy" class="level3" data-number="1.3.16">
+<h3 data-number="1.3.16" class="anchored" data-anchor-id="b29_dummy"><span class="header-section-number">1.3.16</span> b29_dummy</h3>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="fu">frq</span>(data<span class="sc">$</span>b29)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
@@ -923,28 +924,28 @@ Value |   N | Raw % | Valid % | Cum. %
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> data <span class="sc">%&gt;%</span></span>
 <span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">prob_unionmem =</span> <span class="fu">case_when</span>(</span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">b29_dummy =</span> <span class="fu">case_when</span>(</span>
 <span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>      b29 <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">3</span>, <span class="dv">4</span>,<span class="dv">5</span>) <span class="sc">~</span> <span class="dv">1</span>,</span>
 <span id="cb49-5"><a href="#cb49-5" aria-hidden="true" tabindex="-1"></a>      b29 <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="sc">-</span><span class="dv">888</span>, <span class="sc">-</span><span class="dv">999</span>) <span class="sc">~</span> <span class="dv">0</span>,</span>
 <span id="cb49-6"><a href="#cb49-6" aria-hidden="true" tabindex="-1"></a>    )</span>
 <span id="cb49-7"><a href="#cb49-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
-<span id="cb49-8"><a href="#cb49-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_variable_labels</span>(<span class="at">prob_unionmem =</span> <span class="st">"Intention to unionize (1 = yes)"</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb49-9"><a href="#cb49-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_value_labels</span>(<span class="at">union_member =</span> <span class="fu">c</span>(</span>
+<span id="cb49-8"><a href="#cb49-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_variable_labels</span>(<span class="at">b29_dummy =</span> <span class="st">"Intention to unionize (1 = yes)"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb49-9"><a href="#cb49-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_value_labels</span>(<span class="at">b29_dummy =</span> <span class="fu">c</span>(</span>
 <span id="cb49-10"><a href="#cb49-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Yes"</span> <span class="ot">=</span> <span class="dv">1</span>,</span>
 <span id="cb49-11"><a href="#cb49-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">"No"</span> <span class="ot">=</span> <span class="dv">0</span></span>
 <span id="cb49-12"><a href="#cb49-12" aria-hidden="true" tabindex="-1"></a>  )</span>
 <span id="cb49-13"><a href="#cb49-13" aria-hidden="true" tabindex="-1"></a>  )</span>
 <span id="cb49-14"><a href="#cb49-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb49-15"><a href="#cb49-15" aria-hidden="true" tabindex="-1"></a><span class="fu">frq</span>(data<span class="sc">$</span>prob_unionmem)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb49-15"><a href="#cb49-15" aria-hidden="true" tabindex="-1"></a><span class="fu">frq</span>(data<span class="sc">$</span>b29_dummy)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Intention to unionize (1 = yes) (x) &lt;numeric&gt; 
 # total N=3048 valid N=3048 mean=0.62 sd=0.49
 
-Value |    N | Raw % | Valid % | Cum. %
----------------------------------------
-    0 | 1170 | 38.39 |   38.39 |  38.39
-    1 | 1878 | 61.61 |   61.61 | 100.00
- &lt;NA&gt; |    0 |  0.00 |    &lt;NA&gt; |   &lt;NA&gt;</code></pre>
+Value | Label |    N | Raw % | Valid % | Cum. %
+-----------------------------------------------
+    0 |    No | 1170 | 38.39 |   38.39 |  38.39
+    1 |   Yes | 1878 | 61.61 |   61.61 | 100.00
+ &lt;NA&gt; |  &lt;NA&gt; |    0 |  0.00 |    &lt;NA&gt; |   &lt;NA&gt;</code></pre>
 </div>
 </div>
 </section>
@@ -1847,7 +1848,7 @@ Value | Label |    N | Raw % | Valid % | Cum. %
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb125"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb125-1"><a href="#cb125-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(data)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 3048   65</code></pre>
+<pre><code>[1] 3048   66</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb127"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb127-1"><a href="#cb127-1" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(data)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
@@ -1857,33 +1858,33 @@ Value | Label |    N | Raw % | Valid % | Cum. %
  [7] "wrightclass2_capitalists" "wrightclass1_informal"   
  [9] "wrightclass2_informal"    "wrightclass1_reduced"    
 [11] "wrightclass2_reduced"     "wrightclass1_reduced2"   
-[13] "wrightclass1_reduced3"    "wrightclass2_reduced3"   
-[15] "wrightclass1_reduced4"    "wrightclass2_reduced4"   
-[17] "wrightclass1_reduced5"    "wrightclass1_reduced6"   
-[19] "wrightclass1_reduced7"    "a07"                     
-[21] "a25_rec"                  "a26"                     
-[23] "a27"                      "b19"                     
-[25] "b21"                      "b29"                     
-[27] "b25"                      "c01_01"                  
-[29] "c01_02"                   "c01_03"                  
-[31] "c01_04"                   "c05_02"                  
-[33] "c05_03"                   "c06_02"                  
-[35] "c07_01"                   "c07_03"                  
-[37] "c07_04"                   "c07_05"                  
-[39] "c07_06"                   "c08"                     
-[41] "c10_01"                   "c15_01"                  
-[43] "gender"                   "female"                  
-[45] "age"                      "age_br"                  
-[47] "educ"                     "relation_mop"            
-[49] "sector"                   "rama"                    
-[51] "company_size"             "workplace_size"          
-[53] "unions"                   "union_member"            
-[55] "prob_unionmem"            "c05_02_dummy"            
-[57] "c05_03_dummy"             "c06_02_dummy"            
-[59] "c07_01_dummy"             "c07_03_dummy"            
-[61] "c07_04_dummy"             "c07_05_dummy"            
-[63] "c07_06_dummy"             "pol_id"                  
-[65] "politizado"              </code></pre>
+[13] "wrightclass1_reduced3"    "wrightclass1_reduced3_v2"
+[15] "wrightclass2_reduced3"    "wrightclass1_reduced4"   
+[17] "wrightclass2_reduced4"    "wrightclass1_reduced5"   
+[19] "wrightclass1_reduced6"    "wrightclass1_reduced7"   
+[21] "a07"                      "a25_rec"                 
+[23] "a26"                      "a27"                     
+[25] "b19"                      "b21"                     
+[27] "b29"                      "b25"                     
+[29] "c01_01"                   "c01_02"                  
+[31] "c01_03"                   "c01_04"                  
+[33] "c05_02"                   "c05_03"                  
+[35] "c06_02"                   "c07_01"                  
+[37] "c07_03"                   "c07_04"                  
+[39] "c07_05"                   "c07_06"                  
+[41] "c08"                      "c10_01"                  
+[43] "c15_01"                   "gender"                  
+[45] "female"                   "age"                     
+[47] "age_br"                   "educ"                    
+[49] "relation_mop"             "sector"                  
+[51] "rama"                     "company_size"            
+[53] "workplace_size"           "unions"                  
+[55] "union_member"             "b29_dummy"               
+[57] "c05_02_dummy"             "c05_03_dummy"            
+[59] "c06_02_dummy"             "c07_01_dummy"            
+[61] "c07_03_dummy"             "c07_04_dummy"            
+[63] "c07_05_dummy"             "c07_06_dummy"            
+[65] "pol_id"                   "politizado"              </code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb129"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb129-1"><a href="#cb129-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(data,<span class="at">file=</span><span class="st">"output/data/data-cl-paperclar.rds"</span>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
